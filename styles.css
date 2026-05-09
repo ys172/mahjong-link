@@ -363,40 +363,116 @@ p {
 
 @media (max-width: 460px) {
   :root {
-    --tile-w: min(5.15vw, 27px);
-    --tile-h: min(7.25vw, 39px);
+    --tile-w: min(10.7vw, 42px);
+    --tile-h: min(15.1vw, 60px);
+  }
+
+  body {
+    display: block;
+    min-height: 100%;
+    padding: 6px;
+  }
+
+  .game-shell {
+    width: 100%;
+    min-height: auto;
+    gap: 8px;
   }
 
   .topbar {
-    padding: 13px;
-    gap: 12px;
+    min-height: 0;
+    border-radius: 16px;
+    padding: 8px;
+    gap: 8px;
   }
 
   .brand {
-    align-items: flex-start;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  p {
+    display: none;
   }
 
   .stats {
-    gap: 6px;
+    gap: 5px;
   }
 
   .stat {
     min-width: 0;
-    padding: 8px 6px;
-    border-radius: 13px;
+    padding: 6px 4px;
+    border-radius: 10px;
+  }
+
+  .stat span {
+    font-size: 11px;
   }
 
   .stat strong {
-    font-size: 19px;
+    font-size: 17px;
+  }
+
+  .actions {
+    gap: 8px;
   }
 
   .actions button {
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 18px;
+  }
+
+  .play-area {
+    display: block;
+    padding: 0 0 4px;
+    overflow: visible;
+  }
+
+  .board {
+    width: max-content;
+    margin: 0 auto;
+    gap: 3px;
+    padding: 6px;
+    border-radius: 16px;
   }
 
   .tile {
     padding: 0;
+    border-radius: 8px;
+  }
+
+  .tile:hover {
+    transform: none;
+  }
+
+  .tile.selected,
+  .tile.hint {
+    box-shadow:
+      0 0 0 3px rgba(255, 210, 48, 0.8),
+      0 0 0 5px rgba(255, 141, 32, 0.22);
+    transform: scale(1.03);
+  }
+
+  .status-strip {
+    position: sticky;
+    bottom: 6px;
+    min-height: 42px;
+    border-radius: 14px;
+    padding: 9px 10px;
+    font-size: 13px;
   }
 
 }
