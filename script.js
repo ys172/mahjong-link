@@ -13,8 +13,9 @@ const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
 const modalRestartButton = document.querySelector("#modalRestartButton");
 
-const ROWS = 8;
-const COLS = 17;
+const IS_PHONE_PORTRAIT = window.matchMedia("(max-width: 700px) and (orientation: portrait)").matches;
+const ROWS = IS_PHONE_PORTRAIT ? 17 : 8;
+const COLS = IS_PHONE_PORTRAIT ? 8 : 17;
 const TOTAL_TIME = 240;
 const NUMBERS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const ICONS = [
@@ -563,5 +564,8 @@ shuffleButton.addEventListener("click", () => {
 restartButton.addEventListener("click", startGame);
 modalRestartButton.addEventListener("click", startGame);
 window.addEventListener("resize", clearPath);
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => window.location.reload(), 250);
+});
 
 startGame();
