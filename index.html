@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>麻将连连看</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="topbar" aria-label="游戏状态">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div>
+            <h1>麻将连连看</h1>
+            <p>配对相同图案，连线不超过两次转弯</p>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span>分数</span>
+            <strong id="score">0</strong>
+          </div>
+          <div class="stat">
+            <span>剩余</span>
+            <strong id="leftCount">0</strong>
+          </div>
+          <div class="stat">
+            <span>时间</span>
+            <strong id="timer">03:00</strong>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="hintButton" type="button" title="提示">
+            <span aria-hidden="true">?</span>
+          </button>
+          <button id="shuffleButton" type="button" title="洗牌">
+            <span aria-hidden="true">↻</span>
+          </button>
+          <button id="restartButton" type="button" title="重新开始">
+            <span aria-hidden="true">▶</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="play-area" aria-label="游戏区域">
+        <canvas id="lineCanvas" aria-hidden="true"></canvas>
+        <div id="board" class="board" role="grid" aria-label="连连看棋盘"></div>
+      </section>
+
+      <section class="status-strip" aria-live="polite">
+        <span id="message">选中两个相同图案，路径通畅就会消除。</span>
+      </section>
+    </main>
+
+    <div id="resultModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div class="modal-panel">
+        <h2 id="resultTitle">完成</h2>
+        <p id="resultText"></p>
+        <button id="modalRestartButton" type="button">再玩一局</button>
+      </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
