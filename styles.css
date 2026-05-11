@@ -26,7 +26,7 @@
 
 html,
 body {
-  min-height: 101%;
+  min-height: 100%;
 }
 
 body {
@@ -108,7 +108,7 @@ p {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(84px, 1fr));
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
   gap: 10px;
 }
 
@@ -239,8 +239,8 @@ p {
 .tile.selected,
 .tile.hint {
   box-shadow:
-    0 0 0 4px rgba(255, 210, 48, 0.75),
-    0 0 0 7px rgba(255, 141, 32, 0.2);
+    0 0 0 4px rgba(0, 132, 255, 0.92),
+    0 0 0 7px rgba(0, 132, 255, 0.25);
   transform: scale(1.05);
 }
 
@@ -363,7 +363,7 @@ p {
   }
 
   .stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .actions {
@@ -498,8 +498,8 @@ p {
   .tile.selected,
   .tile.hint {
     box-shadow:
-      0 0 0 3px rgba(255, 210, 48, 0.8),
-      0 0 0 5px rgba(255, 141, 32, 0.22);
+      0 0 0 3px rgba(0, 132, 255, 0.95),
+      0 0 0 5px rgba(0, 132, 255, 0.28);
     transform: scale(1.03);
   }
 
