@@ -147,6 +147,30 @@ p {
   box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.18), 0 8px 16px rgba(38, 49, 66, 0.22);
   font-weight: 800;
   font-size: 22px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 0 8px;
+}
+
+.actions button small {
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #263142;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.6);
 }
 
 .actions button:nth-child(2) {
@@ -433,6 +457,13 @@ p {
     height: 38px;
     border-radius: 12px;
     font-size: 18px;
+    padding: 0 9px;
+  }
+
+  .actions button small {
+    min-width: 15px;
+    height: 15px;
+    font-size: 10px;
   }
 
   .play-area {
