@@ -283,6 +283,7 @@ function removePair(first, second, path) {
   score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
   markSelection();
+  renderRemoved();
   drawPath(path);
   updateStats();
   setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
@@ -290,6 +291,7 @@ function removePair(first, second, path) {
   setTimeout(() => {
     clearPath();
     renderRemoved();
+    forceBoardRepaint();
     locked = false;
 
     if (getRemainingTiles().length === 0) {
@@ -359,7 +361,15 @@ function renderRemoved() {
   document.querySelectorAll(".tile").forEach((el) => {
     const tile = grid[Number(el.dataset.row)][Number(el.dataset.col)];
     el.classList.toggle("removed", tile.removed);
+    el.disabled = tile.removed;
+    el.setAttribute("aria-hidden", tile.removed ? "true" : "false");
   });
+}
+
+function forceBoardRepaint() {
+  boardEl.style.transform = "translateZ(0)";
+  void boardEl.offsetHeight;
+  boardEl.style.transform = "";
 }
 
 function getRemainingTiles() {
