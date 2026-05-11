@@ -13,10 +13,6 @@ const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
 const modalRestartButton = document.querySelector("#modalRestartButton");
 
-const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-if (IS_IOS) document.documentElement.classList.add("ios");
-const nextFrame = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : (fn) => setTimeout(fn, 16);
-
 const ROWS = 9;
 const COLS = 8;
 const TOTAL_TIME = 100;
@@ -103,12 +99,9 @@ function renderBoard() {
     button.setAttribute("role", "gridcell");
     button.setAttribute("aria-label", `${ICONS[tile.type].name}麻将牌`);
     if (tile.removed) {
-      button.classList.add("removed");
+      button.className = "tile empty";
       button.disabled = true;
       button.setAttribute("aria-hidden", "true");
-      button.style.visibility = "hidden";
-      button.style.opacity = "0";
-      button.style.pointerEvents = "none";
       button.innerHTML = "";
     } else {
       button.setAttribute("aria-hidden", "false");
@@ -373,13 +366,10 @@ function markSelection() {
 function renderRemoved() {
   document.querySelectorAll(".tile").forEach((el) => {
     const tile = grid[Number(el.dataset.row)][Number(el.dataset.col)];
-    el.classList.toggle("removed", tile.removed);
+    el.classList.toggle("empty", tile.removed);
     el.disabled = tile.removed;
     el.setAttribute("aria-hidden", tile.removed ? "true" : "false");
     if (tile.removed) {
-      el.style.visibility = "hidden";
-      el.style.opacity = "0";
-      el.style.pointerEvents = "none";
       el.innerHTML = "";
     }
   });
@@ -389,10 +379,6 @@ function refreshBoard() {
   renderBoard();
   renderRemoved();
   forceBoardRepaint();
-  nextFrame(() => {
-    renderRemoved();
-    forceBoardRepaint();
-  });
 }
 
 function forceBoardRepaint() {
@@ -656,4 +642,21 @@ function shuffleArray(items) {
 hintButton.addEventListener("click", showHint);
 shuffleButton.addEventListener("click", () => {
   if (locked) return;
-  if (shufflesLeft <= 0
+  if (shufflesLeft <= 0) {
+    setMessage("洗牌次数已经用完了。");
+    updateActionButtons();
+    return;
+  }
+  shufflesLeft -= 1;
+  shuffleRemaining();
+  updateActionButtons();
+  setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
+});
+restartButton.addEventListener("click", startGame);
+modalRestartButton.addEventListener("click", startGame);
+window.addEventListener("resize", clearPath);
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => window.location.reload(), 250);
+});
+
+startGame();
