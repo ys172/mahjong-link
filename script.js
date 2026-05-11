@@ -18,7 +18,7 @@ if (IS_IOS) document.documentElement.classList.add("ios");
 
 const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 80;
+const TOTAL_TIME = 100;
 const MAX_HINTS = 3;
 const MAX_SHUFFLES = 1;
 const PAIR_TIME_BONUS = 1;
