@@ -178,6 +178,10 @@ p {
 }
 
 .actions button:nth-child(3) {
+  background: #1f9ed6;
+}
+
+.actions button:nth-child(4) {
   background: var(--accent);
 }
 
@@ -212,6 +216,39 @@ p {
   height: 100%;
   pointer-events: none;
   z-index: 3;
+}
+
+.pause-overlay {
+  position: absolute;
+  inset: 12px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border-radius: 28px;
+  background: rgba(255, 253, 246, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow);
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.pause-overlay.hidden {
+  display: none;
+}
+
+.pause-overlay div {
+  display: grid;
+  gap: 8px;
+  color: #263142;
+}
+
+.pause-overlay strong {
+  font-size: 32px;
+}
+
+.pause-overlay span {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .tile {
@@ -474,6 +511,7 @@ p {
 
   .play-area {
     display: block;
+    position: relative;
     padding: 0 0 3px;
     overflow: visible;
   }
@@ -484,6 +522,15 @@ p {
     gap: 3px;
     padding: 5px;
     border-radius: 16px;
+  }
+
+  .pause-overlay {
+    inset: 0 0 3px;
+    border-radius: 16px;
+  }
+
+  .pause-overlay strong {
+    font-size: 26px;
   }
 
   .tile {
