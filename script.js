@@ -18,20 +18,22 @@ const COLS = 8;
 const TOTAL_TIME = 100;
 const MAX_HINTS = 3;
 const MAX_SHUFFLES = 1;
-const PAIR_TIME_BONUS = 1;
-const FAST_MATCH_WINDOW = 5000;
 const MIN_AVAILABLE_PAIRS = 5;
 const NUMBERS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+const GREEN = "green";
+const RED = "red";
+const BLACK = "black";
+
 const ICONS = [
-  ...Array.from({ length: 9 }, (_, index) => ({ kind: "wan", value: index + 1, name: `${NUMBERS[index + 1]}万` })),
-  ...Array.from({ length: 9 }, (_, index) => ({ kind: "bamboo", value: index + 1, name: `${NUMBERS[index + 1]}条` })),
-  ...Array.from({ length: 9 }, (_, index) => ({ kind: "dot", value: index + 1, name: `${NUMBERS[index + 1]}筒` })),
-  { kind: "wind", value: "東", name: "东风" },
+  ...Array.from({ length: 9 }, (_, i) => ({ kind: "wan", value: i + 1, name: `${NUMBERS[i + 1]}万` })),
+  ...Array.from({ length: 9 }, (_, i) => ({ kind: "bamboo", value: i + 1, name: `${NUMBERS[i + 1]}条` })),
+  ...Array.from({ length: 9 }, (_, i) => ({ kind: "dot", value: i + 1, name: `${NUMBERS[i + 1]}筒` })),
+  { kind: "wind", value: "东", name: "东风" },
   { kind: "wind", value: "南", name: "南风" },
   { kind: "wind", value: "西", name: "西风" },
   { kind: "wind", value: "北", name: "北风" },
   { kind: "dragon", value: "中", name: "红中" },
-  { kind: "dragon", value: "發", name: "发财" },
+  { kind: "dragon", value: "发", name: "发财" },
   { kind: "dragon", value: "白", name: "白板" },
 ];
 
@@ -43,8 +45,15 @@ let timerId = null;
 let locked = false;
 let hintsLeft = MAX_HINTS;
 let shufflesLeft = MAX_SHUFFLES;
-let combo = 0;
-let lastMatchAt = 0;
+
+function init() {
+  try {
+    startGame();
+    bindEvents();
+  } catch (error) {
+    showFatalError(error);
+  }
+}
 
 function startGame() {
   score = 0;
@@ -53,11 +62,9 @@ function startGame() {
   locked = false;
   hintsLeft = MAX_HINTS;
   shufflesLeft = MAX_SHUFFLES;
-  combo = 0;
-  lastMatchAt = 0;
   modal.classList.add("hidden");
   buildGrid();
-  renderBoard();
+  refreshBoard();
   updateStats();
   setMessage("选中两张相同麻将牌，路径通畅就会消除。");
   clearInterval(timerId);
@@ -69,9 +76,10 @@ function buildGrid() {
   while (pairTypes.length < (ROWS * COLS) / 2) {
     pairTypes.push(Math.floor(Math.random() * ICONS.length));
   }
+  shuffleArray(pairTypes);
   const pieces = pairTypes.flatMap((type) => [type, type]);
-
   shuffleArray(pieces);
+
   grid = Array.from({ length: ROWS }, (_, row) =>
     Array.from({ length: COLS }, (_, col) => ({
       row,
@@ -84,32 +92,27 @@ function buildGrid() {
   ensurePlayableBoard(MIN_AVAILABLE_PAIRS);
 }
 
-function renderBoard() {
+function refreshBoard() {
   boardEl.style.setProperty("--cols", COLS);
   boardEl.style.setProperty("--rows", ROWS);
-  updateActionButtons();
   boardEl.innerHTML = "";
 
   for (const tile of grid.flat()) {
     const button = document.createElement("button");
-    button.className = "tile";
     button.type = "button";
-    button.dataset.row = tile.row;
-    button.dataset.col = tile.col;
+    button.dataset.row = String(tile.row);
+    button.dataset.col = String(tile.col);
+    button.className = tile.removed ? "tile empty" : "tile";
+    button.disabled = tile.removed;
     button.setAttribute("role", "gridcell");
-    button.setAttribute("aria-label", `${ICONS[tile.type].name}麻将牌`);
-    if (tile.removed) {
-      button.className = "tile empty";
-      button.disabled = true;
-      button.setAttribute("aria-hidden", "true");
-      button.innerHTML = "";
-    } else {
-      button.setAttribute("aria-hidden", "false");
-      button.innerHTML = renderMahjongFace(ICONS[tile.type]);
-    }
+    button.setAttribute("aria-hidden", tile.removed ? "true" : "false");
+    button.setAttribute("aria-label", tile.removed ? "空位" : `${ICONS[tile.type].name}麻将牌`);
+    button.innerHTML = tile.removed ? "" : renderMahjongFace(ICONS[tile.type]);
     button.addEventListener("click", () => selectTile(tile.row, tile.col));
     boardEl.appendChild(button);
   }
+
+  updateActionButtons();
 }
 
 function renderMahjongFace(tile) {
@@ -172,13 +175,9 @@ function renderHonor(tile) {
     `;
   }
 
-  const color = tile.value === "中" ? "#d9282f" : tile.value === "發" ? "#1d7a3f" : "#111827";
+  const color = tile.value === "中" ? "#d9282f" : tile.value === "发" ? "#1d7a3f" : "#111827";
   return `<text x="36" y="54" text-anchor="middle" class="tile-text honor-text" fill="${color}">${tile.value}</text>`;
 }
-
-const GREEN = "green";
-const RED = "red";
-const BLACK = "black";
 
 const DOT_LAYOUTS = {
   2: [{ x: 36, y: 33, color: GREEN }, { x: 36, y: 70, color: GREEN }],
@@ -202,7 +201,7 @@ const BAMBOO_LAYOUTS = {
 };
 
 function bambooStick(x, y, colorName) {
-  const body = getMarkColor(colorName);
+  const body = markColor(colorName);
   return `
     <g transform="translate(${x} ${y})">
       <path d="M0 -14 C5 -10 5 -5 0 -1 C-5 -5 -5 -10 0 -14Z" fill="#ffffff" stroke="${body}" stroke-width="2"/>
@@ -226,7 +225,7 @@ function dotOne() {
 }
 
 function dotRing(x, y, colorName) {
-  const ring = getMarkColor(colorName);
+  const ring = markColor(colorName);
   return `
     <g transform="translate(${x} ${y})">
       <circle r="10.2" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
@@ -237,16 +236,16 @@ function dotRing(x, y, colorName) {
   `;
 }
 
-function getMarkColor(colorName) {
-  if (colorName === RED) return "#d9282f";
-  if (colorName === BLACK) return "#111827";
+function markColor(name) {
+  if (name === RED) return "#d9282f";
+  if (name === BLACK) return "#111827";
   return "#168a46";
 }
 
 function selectTile(row, col) {
   if (locked) return;
   const tile = grid[row][col];
-  if (tile.removed) return;
+  if (!tile || tile.removed) return;
 
   if (!selected) {
     selected = tile;
@@ -275,55 +274,43 @@ function selectTile(row, col) {
     return;
   }
 
-  removePair(selected, tile, path);
+  removePair(selected, tile);
 }
 
-function removePair(first, second, path) {
+function removePair(first, second) {
   locked = true;
   first.removed = true;
   second.removed = true;
-  const now = Date.now();
-  combo = now - lastMatchAt <= FAST_MATCH_WINDOW ? combo + 1 : 1;
-  lastMatchAt = now;
-  const comboBonus = 0;
-  const timeBonus = PAIR_TIME_BONUS + comboBonus;
-  timeLeft += timeBonus;
-  score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
+  timeLeft += 1;
+  score += 140;
   clearPath();
   refreshBoard();
   updateStats();
-  setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
+  setMessage("漂亮，连上了！奖励 +1 秒");
 
   setTimeout(() => {
     locked = false;
-
     if (getRemainingTiles().length === 0) {
       endGame(true);
       return;
     }
-
     if (!findAvailablePair()) {
       shuffleRemaining();
       setMessage(`没有可连组合，已自动洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
-    } else {
-      refreshBoard();
     }
-  }, 240);
+  }, 80);
 }
 
 function tick() {
   timeLeft -= 1;
   updateStats();
-
-  if (timeLeft <= 0) {
-    endGame(false);
-  }
+  if (timeLeft <= 0) endGame(false);
 }
 
 function updateStats() {
-  scoreEl.textContent = score;
-  leftCountEl.textContent = getRemainingTiles().length;
+  scoreEl.textContent = String(score);
+  leftCountEl.textContent = String(getRemainingTiles().length);
   timerEl.textContent = formatTime(Math.max(timeLeft, 0));
   updateActionButtons();
 }
@@ -333,8 +320,161 @@ function updateActionButtons() {
   shuffleButton.innerHTML = `<span aria-hidden="true">↻</span><small>${shufflesLeft}</small>`;
   hintButton.disabled = hintsLeft <= 0 || locked;
   shuffleButton.disabled = shufflesLeft <= 0 || locked;
-  hintButton.title = `提示：剩余 ${hintsLeft} 次`;
-  shuffleButton.title = `洗牌：剩余 ${shufflesLeft} 次`;
+}
+
+function markSelection() {
+  document.querySelectorAll(".tile").forEach((el) => {
+    const row = Number(el.dataset.row);
+    const col = Number(el.dataset.col);
+    const active = selected && selected.row === row && selected.col === col;
+    el.classList.toggle("selected", Boolean(active));
+  });
+}
+
+function findPath(a, b) {
+  const expandedRows = ROWS + 2;
+  const expandedCols = COLS + 2;
+  const start = { row: a.row + 1, col: a.col + 1 };
+  const target = { row: b.row + 1, col: b.col + 1 };
+  const blocked = Array.from({ length: expandedRows }, () => Array(expandedCols).fill(false));
+
+  for (const tile of grid.flat()) {
+    if (!tile.removed && tile !== a && tile !== b) blocked[tile.row + 1][tile.col + 1] = true;
+  }
+
+  const dirs = [
+    { row: -1, col: 0 },
+    { row: 0, col: 1 },
+    { row: 1, col: 0 },
+    { row: 0, col: -1 },
+  ];
+  const queue = [{ ...start, dir: -1, turns: 0, path: [start] }];
+  const visited = new Map();
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current.row === target.row && current.col === target.col) return simplifyPath(current.path).map(toBoardPoint);
+
+    dirs.forEach((dir, dirIndex) => {
+      const turns = current.dir === -1 || current.dir === dirIndex ? current.turns : current.turns + 1;
+      if (turns > 2) return;
+      const next = { row: current.row + dir.row, col: current.col + dir.col };
+      if (next.row < 0 || next.row >= expandedRows || next.col < 0 || next.col >= expandedCols) return;
+      if (blocked[next.row][next.col]) return;
+      const key = `${next.row},${next.col},${dirIndex}`;
+      if ((visited.get(key) ?? 3) <= turns) return;
+      visited.set(key, turns);
+      queue.push({ ...next, dir: dirIndex, turns, path: [...current.path, next] });
+    });
+  }
+
+  return null;
+}
+
+function simplifyPath(path) {
+  const result = [path[0]];
+  for (let i = 1; i < path.length - 1; i += 1) {
+    const prev = path[i - 1];
+    const current = path[i];
+    const next = path[i + 1];
+    const sameRow = prev.row === current.row && current.row === next.row;
+    const sameCol = prev.col === current.col && current.col === next.col;
+    if (!sameRow && !sameCol) result.push(current);
+  }
+  result.push(path[path.length - 1]);
+  return result;
+}
+
+function toBoardPoint(point) {
+  return { row: point.row - 1, col: point.col - 1 };
+}
+
+function findAvailablePair() {
+  return findAvailablePairs(1)[0] || null;
+}
+
+function findAvailablePairs(limit = Infinity) {
+  const tiles = getRemainingTiles();
+  const pairs = [];
+  for (let i = 0; i < tiles.length; i += 1) {
+    for (let j = i + 1; j < tiles.length; j += 1) {
+      if (tiles[i].type === tiles[j].type) {
+        const path = findPath(tiles[i], tiles[j]);
+        if (path) {
+          pairs.push([tiles[i], tiles[j], path]);
+          if (pairs.length >= limit) return pairs;
+        }
+      }
+    }
+  }
+  return pairs;
+}
+
+function countAvailablePairs(limit = MIN_AVAILABLE_PAIRS) {
+  return findAvailablePairs(limit).length;
+}
+
+function showHint() {
+  if (locked) return;
+  if (hintsLeft <= 0) {
+    setMessage("提示次数已经用完了。");
+    return;
+  }
+  const match = findAvailablePair();
+  if (!match) {
+    setMessage("暂时没有可提示的组合，请使用洗牌。");
+    return;
+  }
+  hintsLeft -= 1;
+  updateActionButtons();
+  const [first, second] = match;
+  document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hint"));
+  [first, second].forEach((tile) => {
+    const el = getTileElement(tile);
+    if (el) el.classList.add("hint");
+  });
+  setMessage("这两张可以连起来。");
+  setTimeout(() => document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hint")), 900);
+}
+
+function shuffleRemaining() {
+  const remaining = getRemainingTiles();
+  const types = remaining.map((tile) => tile.type);
+  let attempts = 0;
+  do {
+    shuffleArray(types);
+    remaining.forEach((tile, index) => {
+      tile.type = types[index];
+    });
+    attempts += 1;
+  } while (countAvailablePairs(MIN_AVAILABLE_PAIRS) < Math.min(MIN_AVAILABLE_PAIRS, Math.floor(remaining.length / 2)) && attempts < 160);
+  selected = null;
+  refreshBoard();
+}
+
+function ensurePlayableBoard(minPairs = 1) {
+  let attempts = 0;
+  while (countAvailablePairs(minPairs) < Math.min(minPairs, Math.floor(getRemainingTiles().length / 2)) && attempts < 160) {
+    const remaining = getRemainingTiles();
+    const types = remaining.map((tile) => tile.type);
+    shuffleArray(types);
+    remaining.forEach((tile, index) => {
+      tile.type = types[index];
+    });
+    attempts += 1;
+  }
+}
+
+function getRemainingTiles() {
+  return grid.flat().filter((tile) => !tile.removed);
+}
+
+function getTileElement(tile) {
+  return boardEl.querySelector(`[data-row="${tile.row}"][data-col="${tile.col}"]`);
+}
+
+function clearPath() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function formatTime(seconds) {
@@ -355,281 +495,22 @@ function endGame(won) {
   modal.classList.remove("hidden");
 }
 
-function markSelection() {
-  document.querySelectorAll(".tile").forEach((el) => {
-    const row = Number(el.dataset.row);
-    const col = Number(el.dataset.col);
-    el.classList.toggle("selected", selected?.row === row && selected?.col === col);
-  });
-}
-
-function renderRemoved() {
-  document.querySelectorAll(".tile").forEach((el) => {
-    const tile = grid[Number(el.dataset.row)][Number(el.dataset.col)];
-    el.classList.toggle("empty", tile.removed);
-    el.disabled = tile.removed;
-    el.setAttribute("aria-hidden", tile.removed ? "true" : "false");
-    if (tile.removed) {
-      el.innerHTML = "";
+function bindEvents() {
+  hintButton.addEventListener("click", showHint);
+  shuffleButton.addEventListener("click", () => {
+    if (locked) return;
+    if (shufflesLeft <= 0) {
+      setMessage("洗牌次数已经用完了。");
+      return;
     }
-  });
-}
-
-function refreshBoard() {
-  renderBoard();
-  renderRemoved();
-  forceBoardRepaint();
-}
-
-function forceBoardRepaint() {
-  boardEl.style.transform = "translateZ(0)";
-  void boardEl.offsetHeight;
-  boardEl.style.transform = "";
-}
-
-function getRemainingTiles() {
-  return grid.flat().filter((tile) => !tile.removed);
-}
-
-function findPath(a, b) {
-  const expandedRows = ROWS + 2;
-  const expandedCols = COLS + 2;
-  const start = { row: a.row + 1, col: a.col + 1 };
-  const target = { row: b.row + 1, col: b.col + 1 };
-  const blocked = Array.from({ length: expandedRows }, () => Array(expandedCols).fill(false));
-
-  for (const tile of grid.flat()) {
-    if (!tile.removed && tile !== a && tile !== b) {
-      blocked[tile.row + 1][tile.col + 1] = true;
-    }
-  }
-
-  const directions = [
-    { row: -1, col: 0 },
-    { row: 0, col: 1 },
-    { row: 1, col: 0 },
-    { row: 0, col: -1 },
-  ];
-  const queue = [{ ...start, dir: -1, turns: 0, path: [start] }];
-  const visited = new Map();
-
-  while (queue.length) {
-    const current = queue.shift();
-    if (current.row === target.row && current.col === target.col) {
-      return simplifyPath(current.path).map(toBoardPoint);
-    }
-
-    directions.forEach((direction, dirIndex) => {
-      const nextTurns = current.dir === -1 || current.dir === dirIndex ? current.turns : current.turns + 1;
-      if (nextTurns > 2) return;
-
-      const next = {
-        row: current.row + direction.row,
-        col: current.col + direction.col,
-      };
-      if (next.row < 0 || next.row >= expandedRows || next.col < 0 || next.col >= expandedCols) return;
-      if (blocked[next.row][next.col]) return;
-
-      const key = `${next.row},${next.col},${dirIndex}`;
-      if ((visited.get(key) ?? 3) <= nextTurns) return;
-      visited.set(key, nextTurns);
-
-      queue.push({
-        ...next,
-        dir: dirIndex,
-        turns: nextTurns,
-        path: [...current.path, next],
-      });
-    });
-  }
-
-  return null;
-}
-
-function simplifyPath(path) {
-  if (path.length <= 2) return path;
-  const simplified = [path[0]];
-
-  for (let i = 1; i < path.length - 1; i += 1) {
-    const prev = path[i - 1];
-    const current = path[i];
-    const next = path[i + 1];
-    const sameRow = prev.row === current.row && current.row === next.row;
-    const sameCol = prev.col === current.col && current.col === next.col;
-
-    if (!sameRow && !sameCol) {
-      simplified.push(current);
-    }
-  }
-
-  simplified.push(path[path.length - 1]);
-  return simplified;
-}
-
-function toBoardPoint(point) {
-  return {
-    row: point.row - 1,
-    col: point.col - 1,
-  };
-}
-
-function drawPath(path) {
-  resizeCanvas();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 12;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-  strokePath(path);
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
-  strokePath(path);
-}
-
-function strokePath(path) {
-  ctx.beginPath();
-  path.forEach((point, index) => {
-    const pos = cellCenter(point.row, point.col);
-    if (index === 0) ctx.moveTo(pos.x, pos.y);
-    else ctx.lineTo(pos.x, pos.y);
-  });
-  ctx.stroke();
-}
-
-function cellCenter(row, col) {
-  const boardRect = boardEl.getBoundingClientRect();
-  const areaRect = canvas.getBoundingClientRect();
-
-  if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-    return tileCenter(row, col, areaRect);
-  }
-
-  const clampedRow = Math.min(Math.max(row, 0), ROWS - 1);
-  const clampedCol = Math.min(Math.max(col, 0), COLS - 1);
-  const anchor = tileCenter(clampedRow, clampedCol, areaRect);
-
-  if (row < 0) return { x: anchor.x, y: boardRect.top - areaRect.top };
-  if (row >= ROWS) return { x: anchor.x, y: boardRect.bottom - areaRect.top };
-  if (col < 0) return { x: boardRect.left - areaRect.left, y: anchor.y };
-  return { x: boardRect.right - areaRect.left, y: anchor.y };
-}
-
-function tileCenter(row, col, areaRect) {
-  const tile = getTileElement({ row, col });
-  if (!tile) {
-    const boardRect = boardEl.getBoundingClientRect();
-    const cellW = boardRect.width / COLS;
-    const cellH = boardRect.height / ROWS;
-    return {
-      x: boardRect.left - areaRect.left + cellW * (col + 0.5),
-      y: boardRect.top - areaRect.top + cellH * (row + 0.5),
-    };
-  }
-  const rect = tile.getBoundingClientRect();
-
-  return {
-    x: rect.left - areaRect.left + rect.width / 2,
-    y: rect.top - areaRect.top + rect.height / 2,
-  };
-}
-
-function clearPath() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  const scale = window.devicePixelRatio || 1;
-  canvas.width = rect.width * scale;
-  canvas.height = rect.height * scale;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-}
-
-function findAvailablePair() {
-  return findAvailablePairs(1)[0] ?? null;
-}
-
-function findAvailablePairs(limit = Infinity) {
-  const tiles = getRemainingTiles();
-  const pairs = [];
-
-  for (let i = 0; i < tiles.length; i += 1) {
-    for (let j = i + 1; j < tiles.length; j += 1) {
-      if (tiles[i].type === tiles[j].type) {
-        const path = findPath(tiles[i], tiles[j]);
-        if (path) {
-          pairs.push([tiles[i], tiles[j], path]);
-          if (pairs.length >= limit) return pairs;
-        }
-      }
-    }
-  }
-
-  return pairs;
-}
-
-function countAvailablePairs(limit = MIN_AVAILABLE_PAIRS) {
-  return findAvailablePairs(limit).length;
-}
-
-function showHint() {
-  if (locked) return;
-  if (hintsLeft <= 0) {
-    setMessage("提示次数已经用完了。");
+    shufflesLeft -= 1;
+    shuffleRemaining();
     updateActionButtons();
-    return;
-  }
-  const match = findAvailablePair();
-  if (!match) {
-    setMessage("暂时没有可提示的组合，请使用洗牌。");
-    return;
-  }
-
-  hintsLeft -= 1;
-  updateActionButtons();
-  const [first, second, path] = match;
-  drawPath(path);
-  document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hint"));
-  [first, second].forEach((tile) => getTileElement(tile).classList.add("hint"));
-  setMessage("这两张可以连起来。");
-
-  setTimeout(() => {
-    clearPath();
-    document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hint"));
-  }, 900);
-}
-
-function getTileElement(tile) {
-  return boardEl.querySelector(`[data-row="${tile.row}"][data-col="${tile.col}"]`);
-}
-
-function shuffleRemaining() {
-  const remaining = getRemainingTiles();
-  const types = remaining.map((tile) => tile.type);
-  let attempts = 0;
-
-  do {
-    shuffleArray(types);
-    remaining.forEach((tile, index) => {
-      tile.type = types[index];
-    });
-    attempts += 1;
-  } while (countAvailablePairs(MIN_AVAILABLE_PAIRS) < Math.min(MIN_AVAILABLE_PAIRS, Math.floor(remaining.length / 2)) && attempts < 160);
-
-  refreshBoard();
-}
-
-function ensurePlayableBoard(minPairs = 1) {
-  let attempts = 0;
-
-  while (countAvailablePairs(minPairs) < Math.min(minPairs, Math.floor(getRemainingTiles().length / 2)) && attempts < 160) {
-    const types = getRemainingTiles().map((tile) => tile.type);
-    shuffleArray(types);
-    getRemainingTiles().forEach((tile, index) => {
-      tile.type = types[index];
-    });
-    attempts += 1;
-  }
+    setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
+  });
+  restartButton.addEventListener("click", startGame);
+  modalRestartButton.addEventListener("click", startGame);
+  window.addEventListener("resize", clearPath);
 }
 
 function shuffleArray(items) {
@@ -639,24 +520,11 @@ function shuffleArray(items) {
   }
 }
 
-hintButton.addEventListener("click", showHint);
-shuffleButton.addEventListener("click", () => {
-  if (locked) return;
-  if (shufflesLeft <= 0) {
-    setMessage("洗牌次数已经用完了。");
-    updateActionButtons();
-    return;
-  }
-  shufflesLeft -= 1;
-  shuffleRemaining();
-  updateActionButtons();
-  setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
-});
-restartButton.addEventListener("click", startGame);
-modalRestartButton.addEventListener("click", startGame);
-window.addEventListener("resize", clearPath);
-window.addEventListener("orientationchange", () => {
-  setTimeout(() => window.location.reload(), 250);
-});
+function showFatalError(error) {
+  boardEl.innerHTML = "";
+  leftCountEl.textContent = "0";
+  setMessage(`游戏启动失败：${error.message}`);
+  console.error(error);
+}
 
-startGame();
+init();
