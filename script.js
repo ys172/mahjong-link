@@ -13,10 +13,13 @@ const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
 const modalRestartButton = document.querySelector("#modalRestartButton");
 
-const IS_PHONE_PORTRAIT = window.matchMedia("(max-width: 700px) and (orientation: portrait)").matches;
-const ROWS = IS_PHONE_PORTRAIT ? 17 : 8;
-const COLS = IS_PHONE_PORTRAIT ? 8 : 17;
-const TOTAL_TIME = 240;
+const ROWS = 17;
+const COLS = 8;
+const TOTAL_TIME = 360;
+const MAX_HINTS = 3;
+const MAX_SHUFFLES = 3;
+const PAIR_TIME_BONUS = 2;
+const FAST_MATCH_WINDOW = 5000;
 const NUMBERS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const ICONS = [
   ...Array.from({ length: 9 }, (_, index) => ({ kind: "wan", value: index + 1, name: `${NUMBERS[index + 1]}万` })),
@@ -37,12 +40,20 @@ let score = 0;
 let timeLeft = TOTAL_TIME;
 let timerId = null;
 let locked = false;
+let hintsLeft = MAX_HINTS;
+let shufflesLeft = MAX_SHUFFLES;
+let combo = 0;
+let lastMatchAt = 0;
 
 function startGame() {
   score = 0;
   timeLeft = TOTAL_TIME;
   selected = null;
   locked = false;
+  hintsLeft = MAX_HINTS;
+  shufflesLeft = MAX_SHUFFLES;
+  combo = 0;
+  lastMatchAt = 0;
   modal.classList.add("hidden");
   buildGrid();
   renderBoard();
@@ -71,6 +82,7 @@ function buildGrid() {
 function renderBoard() {
   boardEl.style.setProperty("--cols", COLS);
   boardEl.style.setProperty("--rows", ROWS);
+  updateActionButtons();
   boardEl.innerHTML = "";
 
   for (const tile of grid.flat()) {
@@ -257,12 +269,18 @@ function removePair(first, second, path) {
   locked = true;
   first.removed = true;
   second.removed = true;
-  score += 120 + Math.max(0, timeLeft);
+  const now = Date.now();
+  combo = now - lastMatchAt <= FAST_MATCH_WINDOW ? combo + 1 : 1;
+  lastMatchAt = now;
+  const comboBonus = Math.min(combo - 1, 5);
+  const timeBonus = PAIR_TIME_BONUS + comboBonus;
+  timeLeft += timeBonus;
+  score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
   markSelection();
   drawPath(path);
   updateStats();
-  setMessage("漂亮，连上了！");
+  setMessage(`连上了！奖励 +${timeBonus} 秒`);
 
   setTimeout(() => {
     clearPath();
@@ -294,6 +312,16 @@ function updateStats() {
   scoreEl.textContent = score;
   leftCountEl.textContent = getRemainingTiles().length;
   timerEl.textContent = formatTime(Math.max(timeLeft, 0));
+  updateActionButtons();
+}
+
+function updateActionButtons() {
+  hintButton.innerHTML = `<span aria-hidden="true">?</span><small>${hintsLeft}</small>`;
+  shuffleButton.innerHTML = `<span aria-hidden="true">↻</span><small>${shufflesLeft}</small>`;
+  hintButton.disabled = hintsLeft <= 0 || locked;
+  shuffleButton.disabled = shufflesLeft <= 0 || locked;
+  hintButton.title = `提示：剩余 ${hintsLeft} 次`;
+  shuffleButton.title = `洗牌：剩余 ${shufflesLeft} 次`;
 }
 
 function formatTime(seconds) {
@@ -495,13 +523,19 @@ function findAvailablePair() {
 
 function showHint() {
   if (locked) return;
+  if (hintsLeft <= 0) {
+    setMessage("提示次数已经用完了。");
+    updateActionButtons();
+    return;
+  }
   const match = findAvailablePair();
   if (!match) {
-    shuffleRemaining();
-    setMessage("没有可提示的组合，已经洗牌。");
+    setMessage("暂时没有可提示的组合，请使用洗牌。");
     return;
   }
 
+  hintsLeft -= 1;
+  updateActionButtons();
   const [first, second, path] = match;
   drawPath(path);
   document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hint"));
@@ -558,7 +592,14 @@ function shuffleArray(items) {
 hintButton.addEventListener("click", showHint);
 shuffleButton.addEventListener("click", () => {
   if (locked) return;
+  if (shufflesLeft <= 0) {
+    setMessage("洗牌次数已经用完了。");
+    updateActionButtons();
+    return;
+  }
+  shufflesLeft -= 1;
   shuffleRemaining();
+  updateActionButtons();
   setMessage("棋盘已经重新洗牌。");
 });
 restartButton.addEventListener("click", startGame);
