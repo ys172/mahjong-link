@@ -3,11 +3,14 @@ const canvas = document.querySelector("#lineCanvas");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.querySelector("#score");
 const leftCountEl = document.querySelector("#leftCount");
+const levelEl = document.querySelector("#level");
 const timerEl = document.querySelector("#timer");
 const messageEl = document.querySelector("#message");
 const hintButton = document.querySelector("#hintButton");
 const shuffleButton = document.querySelector("#shuffleButton");
+const pauseButton = document.querySelector("#pauseButton");
 const restartButton = document.querySelector("#restartButton");
+const pauseOverlay = document.querySelector("#pauseOverlay");
 const modal = document.querySelector("#resultModal");
 const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
@@ -15,14 +18,17 @@ const modalRestartButton = document.querySelector("#modalRestartButton");
 
 const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 120;
-const MAX_HINTS = 3;
-const MAX_SHUFFLES = 1;
-const MIN_AVAILABLE_PAIRS = 5;
-const NUMBERS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+const HIGH_SCORE_KEY = "mahjong-link-high-score";
+const NUMBERS = ["", "一", "二", "三", "四", "伍", "六", "七", "八", "九"];
 const GREEN = "green";
 const RED = "red";
 const BLACK = "black";
+
+const LEVELS = [
+  { name: "第一关", time: 180, hints: 4, shuffles: 2, minPairs: 10, kinds: ["wan", "dragon"] },
+  { name: "第二关", time: 120, hints: 3, shuffles: 1, minPairs: 7, kinds: ["wan", "bamboo", "dragon"] },
+  { name: "第三关", time: 100, hints: 3, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
+];
 
 const ICONS = [
   ...Array.from({ length: 9 }, (_, i) => ({ kind: "wan", value: i + 1, name: `${NUMBERS[i + 1]}万` })),
@@ -37,14 +43,38 @@ const ICONS = [
   { kind: "dragon", value: "白", name: "白板" },
 ];
 
+const DOT_LAYOUTS = {
+  2: [{ x: 36, y: 33, color: GREEN }, { x: 36, y: 70, color: GREEN }],
+  3: [{ x: 24, y: 28, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 50, y: 76, color: BLACK }],
+  4: [{ x: 24, y: 32, color: GREEN }, { x: 49, y: 32, color: BLACK }, { x: 24, y: 72, color: BLACK }, { x: 49, y: 72, color: GREEN }],
+  5: [{ x: 24, y: 30, color: GREEN }, { x: 49, y: 30, color: BLACK }, { x: 36, y: 52, color: RED }, { x: 24, y: 75, color: BLACK }, { x: 49, y: 75, color: GREEN }],
+  6: [{ x: 25, y: 28, color: GREEN }, { x: 47, y: 28, color: GREEN }, { x: 25, y: 54, color: RED }, { x: 47, y: 54, color: RED }, { x: 25, y: 78, color: RED }, { x: 47, y: 78, color: RED }],
+  7: [{ x: 22, y: 27, color: GREEN }, { x: 36, y: 39, color: GREEN }, { x: 50, y: 51, color: GREEN }, { x: 25, y: 66, color: RED }, { x: 47, y: 66, color: RED }, { x: 25, y: 84, color: RED }, { x: 47, y: 84, color: RED }],
+  8: [{ x: 25, y: 22, color: BLACK }, { x: 47, y: 22, color: BLACK }, { x: 25, y: 39, color: BLACK }, { x: 47, y: 39, color: BLACK }, { x: 25, y: 57, color: BLACK }, { x: 47, y: 57, color: BLACK }, { x: 25, y: 74, color: BLACK }, { x: 47, y: 74, color: BLACK }],
+  9: [{ x: 21, y: 27, color: BLACK }, { x: 36, y: 27, color: BLACK }, { x: 51, y: 27, color: BLACK }, { x: 21, y: 52, color: RED }, { x: 36, y: 52, color: RED }, { x: 51, y: 52, color: RED }, { x: 21, y: 77, color: GREEN }, { x: 36, y: 77, color: GREEN }, { x: 51, y: 77, color: GREEN }],
+};
+
+const BAMBOO_LAYOUTS = {
+  2: [{ x: 36, y: 32, color: GREEN }, { x: 36, y: 72, color: GREEN }],
+  3: [{ x: 36, y: 31, color: RED }, { x: 25, y: 72, color: GREEN }, { x: 47, y: 72, color: GREEN }],
+  4: [{ x: 25, y: 32, color: GREEN }, { x: 47, y: 32, color: GREEN }, { x: 25, y: 72, color: GREEN }, { x: 47, y: 72, color: GREEN }],
+  5: [{ x: 24, y: 29, color: GREEN }, { x: 48, y: 29, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 24, y: 76, color: GREEN }, { x: 48, y: 76, color: GREEN }],
+  6: [{ x: 22, y: 31, color: GREEN }, { x: 36, y: 31, color: GREEN }, { x: 50, y: 31, color: GREEN }, { x: 22, y: 73, color: GREEN }, { x: 36, y: 73, color: GREEN }, { x: 50, y: 73, color: GREEN }],
+  7: [{ x: 36, y: 25, color: RED }, { x: 22, y: 48, color: GREEN }, { x: 36, y: 48, color: GREEN }, { x: 50, y: 48, color: GREEN }, { x: 22, y: 78, color: GREEN }, { x: 36, y: 78, color: GREEN }, { x: 50, y: 78, color: GREEN }],
+  9: [{ x: 21, y: 27, color: GREEN }, { x: 36, y: 27, color: RED }, { x: 51, y: 27, color: GREEN }, { x: 21, y: 52, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 51, y: 52, color: GREEN }, { x: 21, y: 77, color: GREEN }, { x: 36, y: 77, color: RED }, { x: 51, y: 77, color: GREEN }],
+};
+
 let grid = [];
 let selected = null;
 let score = 0;
-let timeLeft = TOTAL_TIME;
+let highScore = loadHighScore();
+let timeLeft = 0;
 let timerId = null;
 let locked = false;
-let hintsLeft = MAX_HINTS;
-let shufflesLeft = MAX_SHUFFLES;
+let paused = false;
+let hintsLeft = 0;
+let shufflesLeft = 0;
+let currentLevel = 0;
 
 function init() {
   try {
@@ -57,24 +87,41 @@ function init() {
 
 function startGame() {
   score = 0;
-  timeLeft = TOTAL_TIME;
+  currentLevel = 0;
+  modal.classList.add("hidden");
+  startLevel();
+}
+
+function startLevel() {
+  const level = getLevelConfig();
+  timeLeft = level.time;
+  hintsLeft = level.hints;
+  shufflesLeft = level.shuffles;
   selected = null;
   locked = false;
-  hintsLeft = MAX_HINTS;
-  shufflesLeft = MAX_SHUFFLES;
-  modal.classList.add("hidden");
-  buildGrid();
+  paused = false;
+  pauseOverlay.classList.add("hidden");
+  buildGrid(level);
   refreshBoard();
   updateStats();
-  setMessage("选中两张相同麻将牌，路径通畅就会消除。");
+  clearPath();
+  setMessage(`${level.name}：选中两张相同麻将牌，连线不超过两次转弯就会消除。最高分 ${highScore}`);
   clearInterval(timerId);
   timerId = setInterval(tick, 1000);
 }
 
-function buildGrid() {
-  const pairTypes = Array.from({ length: ICONS.length }, (_, type) => type);
+function getLevelConfig() {
+  return LEVELS[currentLevel] || LEVELS[LEVELS.length - 1];
+}
+
+function buildGrid(level) {
+  const allowedTypes = ICONS
+    .map((icon, type) => ({ icon, type }))
+    .filter(({ icon }) => level.kinds.includes(icon.kind))
+    .map(({ type }) => type);
+  const pairTypes = [...allowedTypes];
   while (pairTypes.length < (ROWS * COLS) / 2) {
-    pairTypes.push(Math.floor(Math.random() * ICONS.length));
+    pairTypes.push(allowedTypes[Math.floor(Math.random() * allowedTypes.length)]);
   }
   shuffleArray(pairTypes);
   const pieces = pairTypes.flatMap((type) => [type, type]);
@@ -89,7 +136,7 @@ function buildGrid() {
     })),
   );
 
-  ensurePlayableBoard(MIN_AVAILABLE_PAIRS);
+  ensurePlayableBoard(level.minPairs);
 }
 
 function refreshBoard() {
@@ -175,30 +222,9 @@ function renderHonor(tile) {
     `;
   }
 
-  const color = tile.value === "中" ? "#d9282f" : tile.value === "發" ? "#1d7a3f" : "#111827";
+  const color = tile.value === "中" ? "#d9282f" : tile.value === "發" ? "#168a46" : "#111827";
   return `<text x="36" y="54" text-anchor="middle" class="tile-text honor-text" fill="${color}">${tile.value}</text>`;
 }
-
-const DOT_LAYOUTS = {
-  2: [{ x: 36, y: 33, color: GREEN }, { x: 36, y: 70, color: GREEN }],
-  3: [{ x: 24, y: 28, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 50, y: 76, color: BLACK }],
-  4: [{ x: 24, y: 32, color: GREEN }, { x: 49, y: 32, color: BLACK }, { x: 24, y: 72, color: BLACK }, { x: 49, y: 72, color: GREEN }],
-  5: [{ x: 24, y: 30, color: GREEN }, { x: 49, y: 30, color: BLACK }, { x: 36, y: 52, color: RED }, { x: 24, y: 75, color: BLACK }, { x: 49, y: 75, color: GREEN }],
-  6: [{ x: 25, y: 28, color: GREEN }, { x: 47, y: 28, color: GREEN }, { x: 25, y: 54, color: RED }, { x: 47, y: 54, color: RED }, { x: 25, y: 78, color: RED }, { x: 47, y: 78, color: RED }],
-  7: [{ x: 22, y: 27, color: GREEN }, { x: 36, y: 39, color: GREEN }, { x: 50, y: 51, color: GREEN }, { x: 25, y: 66, color: RED }, { x: 47, y: 66, color: RED }, { x: 25, y: 84, color: RED }, { x: 47, y: 84, color: RED }],
-  8: [{ x: 25, y: 22, color: BLACK }, { x: 47, y: 22, color: BLACK }, { x: 25, y: 39, color: BLACK }, { x: 47, y: 39, color: BLACK }, { x: 25, y: 57, color: BLACK }, { x: 47, y: 57, color: BLACK }, { x: 25, y: 74, color: BLACK }, { x: 47, y: 74, color: BLACK }],
-  9: [{ x: 21, y: 27, color: BLACK }, { x: 36, y: 27, color: BLACK }, { x: 51, y: 27, color: BLACK }, { x: 21, y: 52, color: RED }, { x: 36, y: 52, color: RED }, { x: 51, y: 52, color: RED }, { x: 21, y: 77, color: GREEN }, { x: 36, y: 77, color: GREEN }, { x: 51, y: 77, color: GREEN }],
-};
-
-const BAMBOO_LAYOUTS = {
-  2: [{ x: 36, y: 32, color: GREEN }, { x: 36, y: 72, color: GREEN }],
-  3: [{ x: 36, y: 31, color: RED }, { x: 25, y: 72, color: GREEN }, { x: 47, y: 72, color: GREEN }],
-  4: [{ x: 25, y: 32, color: GREEN }, { x: 47, y: 32, color: GREEN }, { x: 25, y: 72, color: GREEN }, { x: 47, y: 72, color: GREEN }],
-  5: [{ x: 24, y: 29, color: GREEN }, { x: 48, y: 29, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 24, y: 76, color: GREEN }, { x: 48, y: 76, color: GREEN }],
-  6: [{ x: 22, y: 31, color: GREEN }, { x: 36, y: 31, color: GREEN }, { x: 50, y: 31, color: GREEN }, { x: 22, y: 73, color: GREEN }, { x: 36, y: 73, color: GREEN }, { x: 50, y: 73, color: GREEN }],
-  7: [{ x: 36, y: 25, color: RED }, { x: 22, y: 48, color: GREEN }, { x: 36, y: 48, color: GREEN }, { x: 50, y: 48, color: GREEN }, { x: 22, y: 78, color: GREEN }, { x: 36, y: 78, color: GREEN }, { x: 50, y: 78, color: GREEN }],
-  9: [{ x: 21, y: 27, color: GREEN }, { x: 36, y: 27, color: RED }, { x: 51, y: 27, color: GREEN }, { x: 21, y: 52, color: GREEN }, { x: 36, y: 52, color: RED }, { x: 51, y: 52, color: GREEN }, { x: 21, y: 77, color: GREEN }, { x: 36, y: 77, color: RED }, { x: 51, y: 77, color: GREEN }],
-};
 
 function bambooStick(x, y, colorName) {
   const body = markColor(colorName);
@@ -243,7 +269,7 @@ function markColor(name) {
 }
 
 function selectTile(row, col) {
-  if (locked) return;
+  if (locked || paused) return;
   const tile = grid[row][col];
   if (!tile || tile.removed) return;
 
@@ -274,35 +300,42 @@ function selectTile(row, col) {
     return;
   }
 
-  removePair(selected, tile);
+  removePair(selected, tile, path);
 }
 
-function removePair(first, second) {
+function removePair(first, second, path) {
   locked = true;
-  first.removed = true;
-  second.removed = true;
   selected = null;
-  timeLeft += 1;
-  score += 140;
-  clearPath();
-  refreshBoard();
-  updateStats();
-  setMessage("漂亮，连上了！奖励 +1 秒");
+  markSelection();
+  drawPath(path);
+  setMessage("连上了，马上消除。");
+
+  setTimeout(() => {
+    first.removed = true;
+    second.removed = true;
+    timeLeft += 1;
+    score += 140;
+    clearPath();
+    refreshBoard();
+    updateStats();
+    setMessage("漂亮，消除成功！奖励 +1 秒。");
+  }, 150);
 
   setTimeout(() => {
     locked = false;
     if (getRemainingTiles().length === 0) {
-      endGame(true);
+      completeLevel();
       return;
     }
     if (!findAvailablePair()) {
       shuffleRemaining();
-      setMessage(`没有可连组合，已自动洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
+      setMessage(`没有可连接组合，已自动洗牌。现在有 ${countAvailablePairs()} 组可连。`);
     }
-  }, 80);
+  }, 230);
 }
 
 function tick() {
+  if (paused) return;
   timeLeft -= 1;
   updateStats();
   if (timeLeft <= 0) endGame(false);
@@ -311,6 +344,7 @@ function tick() {
 function updateStats() {
   scoreEl.textContent = String(score);
   leftCountEl.textContent = String(getRemainingTiles().length);
+  if (levelEl) levelEl.textContent = `${currentLevel + 1}/${LEVELS.length}`;
   timerEl.textContent = formatTime(Math.max(timeLeft, 0));
   updateActionButtons();
 }
@@ -318,8 +352,9 @@ function updateStats() {
 function updateActionButtons() {
   hintButton.innerHTML = `<span aria-hidden="true">?</span><small>${hintsLeft}</small>`;
   shuffleButton.innerHTML = `<span aria-hidden="true">↻</span><small>${shufflesLeft}</small>`;
-  hintButton.disabled = hintsLeft <= 0 || locked;
-  shuffleButton.disabled = shufflesLeft <= 0 || locked;
+  pauseButton.innerHTML = `<span aria-hidden="true">${paused ? "▶" : "Ⅱ"}</span>`;
+  hintButton.disabled = hintsLeft <= 0 || locked || paused;
+  shuffleButton.disabled = shufflesLeft <= 0 || locked || paused;
 }
 
 function markSelection() {
@@ -410,12 +445,12 @@ function findAvailablePairs(limit = Infinity) {
   return pairs;
 }
 
-function countAvailablePairs(limit = MIN_AVAILABLE_PAIRS) {
+function countAvailablePairs(limit = getLevelConfig().minPairs) {
   return findAvailablePairs(limit).length;
 }
 
 function showHint() {
-  if (locked) return;
+  if (locked || paused) return;
   if (hintsLeft <= 0) {
     setMessage("提示次数已经用完了。");
     return;
@@ -447,7 +482,7 @@ function shuffleRemaining() {
       tile.type = types[index];
     });
     attempts += 1;
-  } while (countAvailablePairs(MIN_AVAILABLE_PAIRS) < Math.min(MIN_AVAILABLE_PAIRS, Math.floor(remaining.length / 2)) && attempts < 160);
+  } while (countAvailablePairs() < Math.min(getLevelConfig().minPairs, Math.floor(remaining.length / 2)) && attempts < 160);
   selected = null;
   refreshBoard();
 }
@@ -473,7 +508,63 @@ function getTileElement(tile) {
   return boardEl.querySelector(`[data-row="${tile.row}"][data-col="${tile.col}"]`);
 }
 
+function drawPath(path) {
+  if (!path || path.length < 2) return;
+  resizeCanvas();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const points = path.map(cellCenter);
+  strokePath(points, 12, "rgba(255, 255, 255, 0.96)");
+  strokePath(points, 6, "#0084ff");
+}
+
+function strokePath(points, width, color) {
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  });
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+function cellCenter(point) {
+  const area = canvas.getBoundingClientRect();
+  const metrics = getBoardMetrics(area);
+  return {
+    x: metrics.left + metrics.stepX * point.col,
+    y: metrics.top + metrics.stepY * point.row,
+  };
+}
+
+function getBoardMetrics(area) {
+  const first = getTileElement(grid[0][0]).getBoundingClientRect();
+  const secondCol = getTileElement(grid[0][1]).getBoundingClientRect();
+  const secondRow = getTileElement(grid[1][0]).getBoundingClientRect();
+  return {
+    left: first.left - area.left + first.width / 2,
+    top: first.top - area.top + first.height / 2,
+    stepX: secondCol.left - first.left,
+    stepY: secondRow.top - first.top,
+  };
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const scale = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.round(rect.width * scale));
+  const height = Math.max(1, Math.round(rect.height * scale));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+}
+
 function clearPath() {
+  resizeCanvas();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -487,18 +578,63 @@ function setMessage(text) {
   messageEl.textContent = text;
 }
 
+function togglePause() {
+  if (locked && !paused) return;
+  paused = !paused;
+  selected = null;
+  markSelection();
+  clearPath();
+  pauseOverlay.classList.toggle("hidden", !paused);
+  updateActionButtons();
+  setMessage(paused ? "游戏已暂停，再按暂停按钮继续。" : `${getLevelConfig().name}：继续游戏。`);
+}
+
+function completeLevel() {
+  clearInterval(timerId);
+  if (currentLevel < LEVELS.length - 1) {
+    currentLevel += 1;
+    locked = true;
+    updateStats();
+    setMessage(`进入第 ${currentLevel + 1} 关，难度提高一点。`);
+    setTimeout(startLevel, 800);
+    return;
+  }
+  endGame(true);
+}
+
+function loadHighScore() {
+  try {
+    return Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveHighScore() {
+  if (score <= highScore) return false;
+  highScore = score;
+  try {
+    localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
+  } catch {
+    // Some browsers block localStorage in private mode.
+  }
+  return true;
+}
+
 function endGame(won) {
   locked = true;
   clearInterval(timerId);
-  resultTitle.textContent = won ? "通关成功！" : "时间到";
-  resultText.textContent = won ? `最终分数：${score}` : `还剩 ${getRemainingTiles().length} 张，分数：${score}`;
+  const isNewRecord = saveHighScore();
+  const completed = won ? LEVELS.length : currentLevel;
+  resultTitle.textContent = won ? "通关成功！" : "时间到了";
+  resultText.textContent = `完成 ${completed}/${LEVELS.length} 关，最终分数：${score}。最高分：${highScore}${isNewRecord ? "（新纪录）" : ""}`;
   modal.classList.remove("hidden");
 }
 
 function bindEvents() {
   hintButton.addEventListener("click", showHint);
   shuffleButton.addEventListener("click", () => {
-    if (locked) return;
+    if (locked || paused) return;
     if (shufflesLeft <= 0) {
       setMessage("洗牌次数已经用完了。");
       return;
@@ -506,8 +642,9 @@ function bindEvents() {
     shufflesLeft -= 1;
     shuffleRemaining();
     updateActionButtons();
-    setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
+    setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs()} 组可连。`);
   });
+  pauseButton.addEventListener("click", togglePause);
   restartButton.addEventListener("click", startGame);
   modalRestartButton.addEventListener("click", startGame);
   window.addEventListener("resize", clearPath);
