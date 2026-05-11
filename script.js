@@ -292,17 +292,12 @@ function removePair(first, second, path) {
   timeLeft += timeBonus;
   score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
-  renderBoard();
-  renderRemoved();
-  drawPath(path);
+  clearPath();
+  refreshBoard();
   updateStats();
   setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
 
   setTimeout(() => {
-    clearPath();
-    renderBoard();
-    renderRemoved();
-    forceBoardRepaint();
     locked = false;
 
     if (getRemainingTiles().length === 0) {
@@ -313,6 +308,8 @@ function removePair(first, second, path) {
     if (!findAvailablePair()) {
       shuffleRemaining();
       setMessage(`没有可连组合，已自动洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
+    } else {
+      refreshBoard();
     }
   }, 240);
 }
@@ -375,6 +372,12 @@ function renderRemoved() {
     el.disabled = tile.removed;
     el.setAttribute("aria-hidden", tile.removed ? "true" : "false");
   });
+}
+
+function refreshBoard() {
+  renderBoard();
+  renderRemoved();
+  forceBoardRepaint();
 }
 
 function forceBoardRepaint() {
@@ -612,8 +615,7 @@ function shuffleRemaining() {
     attempts += 1;
   } while (countAvailablePairs(MIN_AVAILABLE_PAIRS) < Math.min(MIN_AVAILABLE_PAIRS, Math.floor(remaining.length / 2)) && attempts < 160);
 
-  renderBoard();
-  renderRemoved();
+  refreshBoard();
 }
 
 function ensurePlayableBoard(minPairs = 1) {
