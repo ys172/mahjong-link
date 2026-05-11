@@ -13,9 +13,12 @@ const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
 const modalRestartButton = document.querySelector("#modalRestartButton");
 
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (IS_IOS) document.documentElement.classList.add("ios");
+
 const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 90;
+const TOTAL_TIME = 80;
 const MAX_HINTS = 3;
 const MAX_SHUFFLES = 1;
 const PAIR_TIME_BONUS = 1;
@@ -282,15 +285,14 @@ function removePair(first, second, path) {
   timeLeft += timeBonus;
   score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
-  markSelection();
-  renderRemoved();
+  renderBoard();
   drawPath(path);
   updateStats();
   setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
 
   setTimeout(() => {
     clearPath();
-    renderRemoved();
+    renderBoard();
     forceBoardRepaint();
     locked = false;
 
