@@ -33,7 +33,7 @@ const ICONS = [
   { kind: "wind", value: "西", name: "西风" },
   { kind: "wind", value: "北", name: "北风" },
   { kind: "dragon", value: "中", name: "红中" },
-  { kind: "dragon", value: "发", name: "发财" },
+  { kind: "dragon", value: "發", name: "发财" },
   { kind: "dragon", value: "白", name: "白板" },
 ];
 
