@@ -8,9 +8,9 @@ const timerEl = document.querySelector("#timer");
 const messageEl = document.querySelector("#message");
 const hintButton = document.querySelector("#hintButton");
 const shuffleButton = document.querySelector("#shuffleButton");
-const pauseButton = document.querySelector("#pauseButton");
+let pauseButton = document.querySelector("#pauseButton");
 const restartButton = document.querySelector("#restartButton");
-const pauseOverlay = document.querySelector("#pauseOverlay");
+let pauseOverlay = document.querySelector("#pauseOverlay");
 const modal = document.querySelector("#resultModal");
 const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
@@ -27,7 +27,7 @@ const BLACK = "black";
 const LEVELS = [
   { name: "第一关", time: 180, hints: 4, shuffles: 2, minPairs: 10, kinds: ["wan", "dragon"] },
   { name: "第二关", time: 120, hints: 3, shuffles: 1, minPairs: 7, kinds: ["wan", "bamboo", "dragon"] },
-  { name: "第三关", time: 90, hints: 2, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
+  { name: "第三关", time: 100, hints: 2, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
 ];
 
 const ICONS = [
@@ -78,6 +78,7 @@ let currentLevel = 0;
 
 function init() {
   try {
+    ensurePauseUi();
     startGame();
     bindEvents();
   } catch (error) {
@@ -88,7 +89,7 @@ function init() {
 function startGame() {
   score = 0;
   currentLevel = 0;
-  modal.classList.add("hidden");
+  modal?.classList.add("hidden");
   startLevel();
 }
 
@@ -112,6 +113,31 @@ function startLevel() {
 
 function getLevelConfig() {
   return LEVELS[currentLevel] || LEVELS[LEVELS.length - 1];
+}
+
+function ensurePauseUi() {
+  if (!pauseButton && restartButton?.parentElement) {
+    pauseButton = document.createElement("button");
+    pauseButton.id = "pauseButton";
+    pauseButton.type = "button";
+    pauseButton.title = "暂停";
+    pauseButton.innerHTML = `<span aria-hidden="true">Ⅱ</span>`;
+    restartButton.parentElement.insertBefore(pauseButton, restartButton);
+  }
+
+  if (!pauseOverlay && boardEl?.parentElement) {
+    pauseOverlay = document.createElement("div");
+    pauseOverlay.id = "pauseOverlay";
+    pauseOverlay.className = "pause-overlay hidden";
+    pauseOverlay.setAttribute("aria-hidden", "true");
+    pauseOverlay.innerHTML = `
+      <div>
+        <strong>暂停中</strong>
+        <span>再按暂停按钮继续</span>
+      </div>
+    `;
+    boardEl.parentElement.appendChild(pauseOverlay);
+  }
 }
 
 function buildGrid(level) {
@@ -628,7 +654,7 @@ function endGame(won) {
   const completed = won ? LEVELS.length : currentLevel;
   resultTitle.textContent = won ? "通关成功！" : "时间到了";
   resultText.textContent = `完成 ${completed}/${LEVELS.length} 关，最终分数：${score}。最高分：${highScore}${isNewRecord ? "（新纪录）" : ""}`;
-  modal.classList.remove("hidden");
+  modal?.classList.remove("hidden");
 }
 
 function bindEvents() {
