@@ -15,6 +15,7 @@ const modalRestartButton = document.querySelector("#modalRestartButton");
 
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 if (IS_IOS) document.documentElement.classList.add("ios");
+const nextFrame = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : (fn) => setTimeout(fn, 16);
 
 const ROWS = 9;
 const COLS = 8;
@@ -105,10 +106,14 @@ function renderBoard() {
       button.classList.add("removed");
       button.disabled = true;
       button.setAttribute("aria-hidden", "true");
+      button.style.visibility = "hidden";
+      button.style.opacity = "0";
+      button.style.pointerEvents = "none";
+      button.innerHTML = "";
     } else {
       button.setAttribute("aria-hidden", "false");
+      button.innerHTML = renderMahjongFace(ICONS[tile.type]);
     }
-    button.innerHTML = renderMahjongFace(ICONS[tile.type]);
     button.addEventListener("click", () => selectTile(tile.row, tile.col));
     boardEl.appendChild(button);
   }
@@ -371,6 +376,12 @@ function renderRemoved() {
     el.classList.toggle("removed", tile.removed);
     el.disabled = tile.removed;
     el.setAttribute("aria-hidden", tile.removed ? "true" : "false");
+    if (tile.removed) {
+      el.style.visibility = "hidden";
+      el.style.opacity = "0";
+      el.style.pointerEvents = "none";
+      el.innerHTML = "";
+    }
   });
 }
 
@@ -378,6 +389,10 @@ function refreshBoard() {
   renderBoard();
   renderRemoved();
   forceBoardRepaint();
+  nextFrame(() => {
+    renderRemoved();
+    forceBoardRepaint();
+  });
 }
 
 function forceBoardRepaint() {
@@ -641,21 +656,4 @@ function shuffleArray(items) {
 hintButton.addEventListener("click", showHint);
 shuffleButton.addEventListener("click", () => {
   if (locked) return;
-  if (shufflesLeft <= 0) {
-    setMessage("洗牌次数已经用完了。");
-    updateActionButtons();
-    return;
-  }
-  shufflesLeft -= 1;
-  shuffleRemaining();
-  updateActionButtons();
-  setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
-});
-restartButton.addEventListener("click", startGame);
-modalRestartButton.addEventListener("click", startGame);
-window.addEventListener("resize", clearPath);
-window.addEventListener("orientationchange", () => {
-  setTimeout(() => window.location.reload(), 250);
-});
-
-startGame();
+  if (shufflesLeft <= 0
