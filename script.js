@@ -101,6 +101,13 @@ function renderBoard() {
     button.dataset.col = tile.col;
     button.setAttribute("role", "gridcell");
     button.setAttribute("aria-label", `${ICONS[tile.type].name}麻将牌`);
+    if (tile.removed) {
+      button.classList.add("removed");
+      button.disabled = true;
+      button.setAttribute("aria-hidden", "true");
+    } else {
+      button.setAttribute("aria-hidden", "false");
+    }
     button.innerHTML = renderMahjongFace(ICONS[tile.type]);
     button.addEventListener("click", () => selectTile(tile.row, tile.col));
     boardEl.appendChild(button);
@@ -286,6 +293,7 @@ function removePair(first, second, path) {
   score += 120 + timeBonus * 20 + comboBonus * 30;
   selected = null;
   renderBoard();
+  renderRemoved();
   drawPath(path);
   updateStats();
   setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
@@ -293,6 +301,7 @@ function removePair(first, second, path) {
   setTimeout(() => {
     clearPath();
     renderBoard();
+    renderRemoved();
     forceBoardRepaint();
     locked = false;
 
@@ -503,6 +512,15 @@ function cellCenter(row, col) {
 
 function tileCenter(row, col, areaRect) {
   const tile = getTileElement({ row, col });
+  if (!tile) {
+    const boardRect = boardEl.getBoundingClientRect();
+    const cellW = boardRect.width / COLS;
+    const cellH = boardRect.height / ROWS;
+    return {
+      x: boardRect.left - areaRect.left + cellW * (col + 0.5),
+      y: boardRect.top - areaRect.top + cellH * (row + 0.5),
+    };
+  }
   const rect = tile.getBoundingClientRect();
 
   return {
