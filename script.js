@@ -27,7 +27,7 @@ const BLACK = "black";
 const LEVELS = [
   { name: "第一关", time: 180, hints: 4, shuffles: 2, minPairs: 10, kinds: ["wan", "dragon"] },
   { name: "第二关", time: 120, hints: 3, shuffles: 1, minPairs: 7, kinds: ["wan", "bamboo", "dragon"] },
-  { name: "第三关", time: 100, hints: 2, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
+  { name: "第三关", time: 100, hints: 3, shuffles: 1, minPairs: 5, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
 ];
 
 const ICONS = [
