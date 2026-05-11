@@ -244,27 +244,16 @@ p {
   transform: scale(1.05);
 }
 
-.tile.removed {
-  visibility: hidden;
-  opacity: 0;
+.tile.empty {
+  background: transparent;
+  opacity: 1;
   pointer-events: none;
   transform: none;
   transition: none;
 }
 
-.ios .tile,
-.ios .mahjong-face {
-  transition: none;
-  animation: none;
-  transform: none;
-  -webkit-transform: none;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
-
-.ios .tile.selected,
-.ios .tile.hint {
-  transform: none;
+.tile.empty .mahjong-face {
+  display: none;
 }
 
 .mahjong-face {
