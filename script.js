@@ -27,7 +27,7 @@ const BLACK = "black";
 const LEVELS = [
   { name: "第一关", time: 180, hints: 4, shuffles: 2, minPairs: 10, kinds: ["wan", "dragon"] },
   { name: "第二关", time: 120, hints: 3, shuffles: 1, minPairs: 7, kinds: ["wan", "bamboo", "dragon"] },
-  { name: "第三关", time: 100, hints: 3, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
+  { name: "第三关", time: 90, hints: 2, shuffles: 1, minPairs: 4, kinds: ["wan", "bamboo", "dot", "wind", "dragon"] },
 ];
 
 const ICONS = [
@@ -100,7 +100,7 @@ function startLevel() {
   selected = null;
   locked = false;
   paused = false;
-  pauseOverlay.classList.add("hidden");
+  pauseOverlay?.classList.add("hidden");
   buildGrid(level);
   refreshBoard();
   updateStats();
@@ -352,7 +352,7 @@ function updateStats() {
 function updateActionButtons() {
   hintButton.innerHTML = `<span aria-hidden="true">?</span><small>${hintsLeft}</small>`;
   shuffleButton.innerHTML = `<span aria-hidden="true">↻</span><small>${shufflesLeft}</small>`;
-  pauseButton.innerHTML = `<span aria-hidden="true">${paused ? "▶" : "Ⅱ"}</span>`;
+  if (pauseButton) pauseButton.innerHTML = `<span aria-hidden="true">${paused ? "▶" : "Ⅱ"}</span>`;
   hintButton.disabled = hintsLeft <= 0 || locked || paused;
   shuffleButton.disabled = shufflesLeft <= 0 || locked || paused;
 }
@@ -584,7 +584,7 @@ function togglePause() {
   selected = null;
   markSelection();
   clearPath();
-  pauseOverlay.classList.toggle("hidden", !paused);
+  pauseOverlay?.classList.toggle("hidden", !paused);
   updateActionButtons();
   setMessage(paused ? "游戏已暂停，再按暂停按钮继续。" : `${getLevelConfig().name}：继续游戏。`);
 }
@@ -644,7 +644,7 @@ function bindEvents() {
     updateActionButtons();
     setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs()} 组可连。`);
   });
-  pauseButton.addEventListener("click", togglePause);
+  pauseButton?.addEventListener("click", togglePause);
   restartButton.addEventListener("click", startGame);
   modalRestartButton.addEventListener("click", startGame);
   window.addEventListener("resize", clearPath);
