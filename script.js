@@ -13,13 +13,14 @@ const resultTitle = document.querySelector("#resultTitle");
 const resultText = document.querySelector("#resultText");
 const modalRestartButton = document.querySelector("#modalRestartButton");
 
-const ROWS = 17;
+const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 360;
+const TOTAL_TIME = 90;
 const MAX_HINTS = 3;
-const MAX_SHUFFLES = 3;
-const PAIR_TIME_BONUS = 2;
+const MAX_SHUFFLES = 1;
+const PAIR_TIME_BONUS = 1;
 const FAST_MATCH_WINDOW = 5000;
+const MIN_AVAILABLE_PAIRS = 5;
 const NUMBERS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const ICONS = [
   ...Array.from({ length: 9 }, (_, index) => ({ kind: "wan", value: index + 1, name: `${NUMBERS[index + 1]}万` })),
@@ -64,7 +65,11 @@ function startGame() {
 }
 
 function buildGrid() {
-  const pieces = ICONS.flatMap((_, type) => [type, type, type, type]);
+  const pairTypes = Array.from({ length: ICONS.length }, (_, type) => type);
+  while (pairTypes.length < (ROWS * COLS) / 2) {
+    pairTypes.push(Math.floor(Math.random() * ICONS.length));
+  }
+  const pieces = pairTypes.flatMap((type) => [type, type]);
 
   shuffleArray(pieces);
   grid = Array.from({ length: ROWS }, (_, row) =>
@@ -76,7 +81,7 @@ function buildGrid() {
     })),
   );
 
-  ensurePlayableBoard();
+  ensurePlayableBoard(MIN_AVAILABLE_PAIRS);
 }
 
 function renderBoard() {
@@ -272,7 +277,7 @@ function removePair(first, second, path) {
   const now = Date.now();
   combo = now - lastMatchAt <= FAST_MATCH_WINDOW ? combo + 1 : 1;
   lastMatchAt = now;
-  const comboBonus = Math.min(combo - 1, 5);
+  const comboBonus = 0;
   const timeBonus = PAIR_TIME_BONUS + comboBonus;
   timeLeft += timeBonus;
   score += 120 + timeBonus * 20 + comboBonus * 30;
@@ -280,7 +285,7 @@ function removePair(first, second, path) {
   markSelection();
   drawPath(path);
   updateStats();
-  setMessage(`连上了！奖励 +${timeBonus} 秒`);
+  setMessage(timeBonus > 0 ? `连击奖励 +${timeBonus} 秒` : "漂亮，连上了！");
 
   setTimeout(() => {
     clearPath();
@@ -294,7 +299,7 @@ function removePair(first, second, path) {
 
     if (!findAvailablePair()) {
       shuffleRemaining();
-      setMessage("没有可连的组合，已经自动洗牌。");
+      setMessage(`没有可连组合，已自动洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
     }
   }, 240);
 }
@@ -507,18 +512,30 @@ function resizeCanvas() {
 }
 
 function findAvailablePair() {
+  return findAvailablePairs(1)[0] ?? null;
+}
+
+function findAvailablePairs(limit = Infinity) {
   const tiles = getRemainingTiles();
+  const pairs = [];
 
   for (let i = 0; i < tiles.length; i += 1) {
     for (let j = i + 1; j < tiles.length; j += 1) {
       if (tiles[i].type === tiles[j].type) {
         const path = findPath(tiles[i], tiles[j]);
-        if (path) return [tiles[i], tiles[j], path];
+        if (path) {
+          pairs.push([tiles[i], tiles[j], path]);
+          if (pairs.length >= limit) return pairs;
+        }
       }
     }
   }
 
-  return null;
+  return pairs;
+}
+
+function countAvailablePairs(limit = MIN_AVAILABLE_PAIRS) {
+  return findAvailablePairs(limit).length;
 }
 
 function showHint() {
@@ -563,16 +580,16 @@ function shuffleRemaining() {
       tile.type = types[index];
     });
     attempts += 1;
-  } while (!findAvailablePair() && attempts < 80);
+  } while (countAvailablePairs(MIN_AVAILABLE_PAIRS) < Math.min(MIN_AVAILABLE_PAIRS, Math.floor(remaining.length / 2)) && attempts < 160);
 
   renderBoard();
   renderRemoved();
 }
 
-function ensurePlayableBoard() {
+function ensurePlayableBoard(minPairs = 1) {
   let attempts = 0;
 
-  while (!findAvailablePair() && attempts < 40) {
+  while (countAvailablePairs(minPairs) < Math.min(minPairs, Math.floor(getRemainingTiles().length / 2)) && attempts < 160) {
     const types = getRemainingTiles().map((tile) => tile.type);
     shuffleArray(types);
     getRemainingTiles().forEach((tile, index) => {
@@ -600,7 +617,7 @@ shuffleButton.addEventListener("click", () => {
   shufflesLeft -= 1;
   shuffleRemaining();
   updateActionButtons();
-  setMessage("棋盘已经重新洗牌。");
+  setMessage(`棋盘已经重新洗牌。现在有 ${countAvailablePairs(MIN_AVAILABLE_PAIRS)} 组可连`);
 });
 restartButton.addEventListener("click", startGame);
 modalRestartButton.addEventListener("click", startGame);
