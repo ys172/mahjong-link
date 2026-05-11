@@ -15,7 +15,7 @@ const modalRestartButton = document.querySelector("#modalRestartButton");
 
 const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 90;
+const TOTAL_TIME = 120;
 const MAX_HINTS = 3;
 const MAX_SHUFFLES = 1;
 const MIN_AVAILABLE_PAIRS = 5;
@@ -175,7 +175,7 @@ function renderHonor(tile) {
     `;
   }
 
-  const color = tile.value === "中" ? "#d9282f" : tile.value === "发" ? "#1d7a3f" : "#111827";
+  const color = tile.value === "中" ? "#d9282f" : tile.value === "發" ? "#1d7a3f" : "#111827";
   return `<text x="36" y="54" text-anchor="middle" class="tile-text honor-text" fill="${color}">${tile.value}</text>`;
 }
 
