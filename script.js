@@ -15,7 +15,7 @@ const modalRestartButton = document.querySelector("#modalRestartButton");
 
 const ROWS = 9;
 const COLS = 8;
-const TOTAL_TIME = 100;
+const TOTAL_TIME = 90;
 const MAX_HINTS = 3;
 const MAX_SHUFFLES = 1;
 const MIN_AVAILABLE_PAIRS = 5;
